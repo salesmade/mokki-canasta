@@ -18,9 +18,11 @@ await build({
 // index.html viittaa /app.js:aan
 writeFileSync('public/index.html', readFileSync('web/index.html', 'utf8').replace('/web/app.js', '/app.js'));
 
-// --- Serverless-funktiot ---
+// --- Serverless-funktiot (CommonJS = Vercelin luotettavin funktiomuoto) ---
 rmSync('api', { recursive: true, force: true });
 mkdirSync('api', { recursive: true });
+// Ohita juuren "type":"module" api-kansiossa -> .js on CommonJS Vercelin funktioille.
+writeFileSync('api/package.json', JSON.stringify({ type: 'commonjs' }, null, 2) + '\n');
 const FUNCTIONS = ['create', 'join', 'start', 'move', 'next', 'state', 'ping'];
 for (const name of FUNCTIONS) {
   await build({
@@ -28,7 +30,7 @@ for (const name of FUNCTIONS) {
     outfile: `api/${name}.js`,
     bundle: true,
     platform: 'node',
-    format: 'esm',
+    format: 'cjs',
     target: 'node18',
   });
 }

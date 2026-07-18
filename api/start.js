@@ -1,3 +1,28 @@
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+// functions/start.js
+var start_exports = {};
+__export(start_exports, {
+  default: () => handler
+});
+module.exports = __toCommonJS(start_exports);
+
 // src/cards.js
 var SUITS = ["H", "D", "C", "S"];
 var RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
@@ -751,6 +776,3 @@ async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "POST vain" });
   run(res, async () => api().start(await body(req)));
 }
-export {
-  handler as default
-};
