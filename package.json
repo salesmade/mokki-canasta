@@ -4,9 +4,10 @@
   "description": "Annelin Canasta — 1-4 pelaajaa, Annelin saannoilla",
   "type": "module",
   "scripts": {
+    "build": "node build.mjs",
     "test": "node --test",
     "itest": "node scripts/itest.mjs",
-    "start": "node server.mjs"
+    "start": "node build.mjs && node server.mjs"
   },
   "license": "MIT"
 }

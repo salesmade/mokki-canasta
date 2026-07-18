@@ -49,11 +49,12 @@ async function handleApi(req, res, path, url) {
   } catch (e) { sendJson(res, { error: String(e.message || e) }); }
 }
 
+const PUBLIC = join(ROOT, 'public');
 async function handleStatic(req, res, path) {
   try {
-    if (path === '/') path = '/web/index.html';
-    const full = normalize(join(ROOT, path));
-    if (!full.startsWith(ROOT)) { res.writeHead(403); return res.end('forbidden'); }
+    if (path === '/') path = '/index.html';
+    const full = normalize(join(PUBLIC, path));
+    if (!full.startsWith(PUBLIC)) { res.writeHead(403); return res.end('forbidden'); }
     const data = await readFile(full);
     res.writeHead(200, { 'content-type': TYPES[extname(full)] || 'application/octet-stream' });
     res.end(data);
