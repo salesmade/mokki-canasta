@@ -21,7 +21,7 @@ writeFileSync('public/index.html', readFileSync('web/index.html', 'utf8').replac
 // --- Serverless-funktiot ---
 rmSync('api', { recursive: true, force: true });
 mkdirSync('api', { recursive: true });
-const FUNCTIONS = ['create', 'join', 'start', 'move', 'next', 'state'];
+const FUNCTIONS = ['create', 'join', 'start', 'move', 'next', 'state', 'ping'];
 for (const name of FUNCTIONS) {
   await build({
     entryPoints: [`functions/${name}.js`],
