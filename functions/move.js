@@ -1,0 +1,5 @@
+import { api, body, run } from './_lib.js';
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'POST vain' });
+  run(res, async () => api().move(await body(req)));
+}

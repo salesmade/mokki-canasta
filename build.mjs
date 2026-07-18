@@ -1,19 +1,36 @@
-// Build: kopioi selaimen tiedostot public/-kansioon (Vercel tarjoilee public/:n sellaisenaan).
-// API-funktiot (/api) käyttävät edelleen repo-juuren /src:iä palvelinpuolella.
-import { mkdirSync, copyFileSync, readdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
+// Build: bundlaa KAIKKI itsenäisiksi tiedostoiksi esbuildilla.
+// Lopputuloksessa ei yhtään ../src-importtia -> Vercelillä ei voi tulla "Cannot find module".
+//   web/app.js        -> public/app.js   (selain, self-contained)
+//   functions/*.js    -> api/*.js         (serverless-funktiot, self-contained)
+import { build } from 'esbuild';
+import { mkdirSync, copyFileSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 
+// --- Selain ---
 rmSync('public', { recursive: true, force: true });
-mkdirSync('public/src', { recursive: true });
+mkdirSync('public', { recursive: true });
+await build({
+  entryPoints: ['web/app.js'],
+  outfile: 'public/app.js',
+  bundle: true,
+  format: 'esm',
+  target: 'es2020',
+});
+// index.html viittaa /app.js:aan
+writeFileSync('public/index.html', readFileSync('web/index.html', 'utf8').replace('/web/app.js', '/app.js'));
 
-// index.html: viittaa /app.js:aan (public-juuresta).
-const html = readFileSync('web/index.html', 'utf8').replace('/web/app.js', '/app.js');
-writeFileSync('public/index.html', html);
+// --- Serverless-funktiot ---
+rmSync('api', { recursive: true, force: true });
+mkdirSync('api', { recursive: true });
+const FUNCTIONS = ['create', 'join', 'start', 'move', 'next', 'state'];
+for (const name of FUNCTIONS) {
+  await build({
+    entryPoints: [`functions/${name}.js`],
+    outfile: `api/${name}.js`,
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    target: 'node18',
+  });
+}
 
-// app.js selaimeen; sen importit ../src/* osuvat public/src/*:aan.
-copyFileSync('web/app.js', 'public/app.js');
-
-// Vain selaimen tarvitsemat moduulit (ei palvelinkoodia public:iin).
-const BROWSER_SRC = ['cards.js', 'melds.js', 'scoring.js', 'game.js', 'bot.js'];
-for (const f of BROWSER_SRC) copyFileSync(`src/${f}`, `public/src/${f}`);
-
-console.log('build valmis -> public/ (index.html, app.js, src/*)');
+console.log('build valmis: public/ (index.html, app.js) + api/ (' + FUNCTIONS.join(', ') + ')');

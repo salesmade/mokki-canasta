@@ -9,5 +9,8 @@
     "itest": "node scripts/itest.mjs",
     "start": "node build.mjs && node server.mjs"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.28.1"
+  }
 }
