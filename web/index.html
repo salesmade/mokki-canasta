@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>Mökki-Canasta</title>
+  <style>
+    :root {
+      --bg: #0f5132;      /* pöydän vihreä */
+      --bg2: #14663f;
+      --felt: #157347;
+      --card: #fffef7;
+      --ink: #1a1a1a;
+      --red: #c0392b;
+      --gold: #e6b800;
+      --hi: #ffe27a;      /* korostus */
+      --line: rgba(255,255,255,.18);
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+      background: radial-gradient(circle at 50% 30%, var(--bg2), var(--bg));
+      color: #fff; overflow: hidden;
+      display: flex; flex-direction: column; height: 100dvh;
+    }
+
+    /* ---- Aloitusnäyttö ---- */
+    #setup {
+      margin: auto; text-align: center; padding: 24px; max-width: 480px;
+    }
+    #setup h1 { font-size: 2.2rem; margin: 0 0 4px; }
+    #setup p { opacity: .85; margin: 0 0 24px; }
+    .opt { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 14px 0; }
+    .opt button {
+      font-size: 1.1rem; padding: 14px 20px; border-radius: 14px; border: 2px solid var(--line);
+      background: rgba(255,255,255,.08); color: #fff; cursor: pointer; min-width: 64px;
+    }
+    .opt button.sel { background: var(--gold); color: #000; border-color: var(--gold); font-weight: 700; }
+    .label { font-size: .95rem; opacity: .8; margin-top: 18px; }
+    #startBtn {
+      margin-top: 28px; font-size: 1.4rem; font-weight: 800; padding: 16px 40px;
+      border-radius: 16px; border: none; background: var(--gold); color: #000; cursor: pointer;
+    }
+
+    /* ---- Peli ---- */
+    #game { display: none; flex-direction: column; height: 100dvh; }
+    #topbar {
+      display: flex; align-items: center; gap: 12px; padding: 8px 12px;
+      background: rgba(0,0,0,.25); font-size: .95rem; flex-wrap: wrap;
+    }
+    #topbar .score { font-weight: 700; }
+    #topbar .spacer { flex: 1; }
+    .toggle { display: flex; align-items: center; gap: 6px; font-size: .9rem; }
+
+    #opponents { display: flex; gap: 10px; padding: 10px 12px; flex-wrap: wrap; }
+    .opp {
+      background: rgba(0,0,0,.2); border-radius: 12px; padding: 8px 12px; min-width: 120px;
+      border: 2px solid transparent;
+    }
+    .opp.active { border-color: var(--gold); box-shadow: 0 0 14px rgba(230,184,0,.5); }
+    .opp .name { font-weight: 700; }
+    .opp .cnt { font-size: .85rem; opacity: .85; }
+    .opp .melds { font-size: .8rem; opacity: .9; margin-top: 4px; }
+
+    #center {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 30px;
+      padding: 8px; flex-wrap: wrap; overflow: auto;
+    }
+    .pile { text-align: center; }
+    .pile .cap { font-size: .8rem; opacity: .8; margin-bottom: 6px; }
+
+    #myMelds {
+      padding: 6px 12px; display: flex; gap: 14px; flex-wrap: wrap; min-height: 40px;
+      align-items: center; border-top: 1px solid var(--line);
+    }
+    .meldgroup { display: flex; align-items: center; gap: 2px; }
+    .meldgroup .lbl { font-size: .75rem; opacity: .8; margin-right: 4px; }
+    .canasta-badge { color: var(--gold); font-weight: 800; margin-left: 4px; }
+
+    /* ---- Kortit ---- */
+    .card {
+      width: 62px; height: 88px; background: var(--card); color: var(--ink);
+      border-radius: 9px; box-shadow: 0 2px 5px rgba(0,0,0,.35);
+      display: inline-flex; flex-direction: column; justify-content: space-between;
+      padding: 6px 7px; font-weight: 800; cursor: pointer; user-select: none;
+      border: 3px solid transparent; position: relative; flex: 0 0 auto;
+    }
+    .card.small { width: 40px; height: 56px; padding: 4px; border-radius: 6px; font-size: .8rem; cursor: default; }
+    .card.back { background: repeating-linear-gradient(45deg, #7a1f1f, #7a1f1f 6px, #611717 6px, #611717 12px); }
+    .card .r { font-size: 1.25rem; line-height: 1; }
+    .card.small .r { font-size: .85rem; }
+    .card .s { font-size: 1.1rem; text-align: right; }
+    .card.red { color: var(--red); }
+    .card.sel { border-color: var(--gold); transform: translateY(-14px); box-shadow: 0 8px 16px rgba(0,0,0,.4); }
+    .card.hint { border-color: var(--hi); }
+    .card.joker { background: linear-gradient(135deg,#2b2b2b,#444); color: var(--gold); }
+
+    #handwrap { background: rgba(0,0,0,.28); padding: 8px 6px 4px; }
+    #hand {
+      display: flex; gap: 6px; overflow-x: auto; padding: 12px 8px 6px; min-height: 108px;
+      align-items: flex-end;
+    }
+    #actions { display: flex; gap: 8px; padding: 8px; flex-wrap: wrap; justify-content: center; }
+    #actions button {
+      font-size: 1.05rem; font-weight: 700; padding: 12px 18px; border-radius: 12px;
+      border: none; cursor: pointer; background: rgba(255,255,255,.14); color: #fff;
+    }
+    #actions button.primary { background: var(--gold); color: #000; }
+    #actions button:disabled { opacity: .3; cursor: not-allowed; }
+
+    #msg {
+      text-align: center; font-size: 1.05rem; padding: 6px 12px; min-height: 26px;
+      background: rgba(0,0,0,.2);
+    }
+    #msg.warn { color: #ffd27a; }
+    #msg.good { color: #9be89b; }
+    #pending { font-size: .85rem; opacity: .9; text-align: center; padding: 2px; }
+
+    /* ---- Loppuruutu ---- */
+    #over {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.8);
+      align-items: center; justify-content: center; z-index: 10;
+    }
+    #over .box { background: #14663f; padding: 28px; border-radius: 18px; text-align: center; max-width: 420px; }
+    #over h2 { margin-top: 0; }
+    #over table { width: 100%; margin: 14px 0; border-collapse: collapse; }
+    #over td { padding: 4px 8px; text-align: left; }
+    #over button { font-size: 1.2rem; padding: 12px 28px; border-radius: 12px; border: none; background: var(--gold); cursor: pointer; }
+
+    /* Iso tila = isommat kortit isoäidille */
+    body.big .card { width: 82px; height: 116px; }
+    body.big .card .r { font-size: 1.7rem; }
+    body.big #hand { min-height: 140px; }
+  </style>
+</head>
+<body>
+  <!-- Aloitus -->
+  <div id="setup">
+    <h1>🃏 Mökki-Canasta</h1>
+    <p>Annelin säännöillä. Pelaa botteja vastaan tai harjoittele.</p>
+
+    <input id="playerName" placeholder="Nimesi" maxlength="20" value="Sinä"
+      style="font-size:1.1rem;padding:12px 16px;border-radius:12px;border:2px solid var(--line);background:rgba(255,255,255,.08);color:#fff;width:220px;text-align:center" />
+
+    <div class="label">Pelitapa</div>
+    <div class="opt" id="modeOpt">
+      <button data-m="local" class="sel">Yksin (botit)</button>
+      <button data-m="online">Pelatkaa yhdessä</button>
+    </div>
+
+    <div class="label">Montako pelaajaa/paikkaa?</div>
+    <div class="opt" id="playerCount">
+      <button data-n="2">2</button>
+      <button data-n="3" class="sel">3</button>
+      <button data-n="4">4</button>
+    </div>
+
+    <div id="onlineJoin" style="display:none">
+      <div class="label">…tai liity kaverin huoneeseen koodilla</div>
+      <div class="opt">
+        <input id="joinCode" placeholder="KOODI" maxlength="4"
+          style="text-transform:uppercase;font-size:1.4rem;letter-spacing:4px;width:130px;text-align:center;padding:12px;border-radius:12px;border:2px solid var(--line);background:rgba(255,255,255,.08);color:#fff" />
+        <button id="joinBtn" style="font-size:1.1rem;padding:14px 20px;border-radius:14px;border:2px solid var(--line);background:rgba(255,255,255,.08);color:#fff;cursor:pointer">Liity</button>
+      </div>
+    </div>
+
+    <div class="label">Vihjeet (auttavat opettelussa)</div>
+    <div class="opt" id="hintOpt">
+      <button data-h="1" class="sel">Päällä</button>
+      <button data-h="0">Pois</button>
+    </div>
+
+    <div class="label">Isot kortit (helpompi lukea)</div>
+    <div class="opt" id="bigOpt">
+      <button data-b="0" class="sel">Normaali</button>
+      <button data-b="1">Isot</button>
+    </div>
+
+    <button id="startBtn">Aloita peli</button>
+  </div>
+
+  <!-- Aula (moninpeli) -->
+  <div id="lobby" style="display:none;margin:auto;text-align:center;padding:24px;max-width:460px">
+    <h1 style="font-size:1.8rem;margin:0 0 8px">Huone</h1>
+    <p style="opacity:.85;margin:0 0 8px">Jaa tämä koodi muille pelaajille:</p>
+    <div id="lobbyCode" style="font-size:3rem;font-weight:800;letter-spacing:10px;color:var(--gold);margin:8px 0"></div>
+    <div id="lobbyPlayers" style="margin:18px 0;font-size:1.1rem"></div>
+    <p id="lobbyHint" style="opacity:.8;font-size:.95rem"></p>
+    <button id="lobbyStart" style="display:none;margin-top:14px;font-size:1.3rem;font-weight:800;padding:14px 36px;border-radius:16px;border:none;background:var(--gold);color:#000;cursor:pointer">Aloita peli</button>
+  </div>
+
+  <!-- Peli -->
+  <div id="game">
+    <div id="topbar">
+      <span class="score" id="scores"></span>
+      <span class="spacer"></span>
+      <span id="turnInfo"></span>
+      <span class="spacer"></span>
+      <label class="toggle"><input type="checkbox" id="hintChk" /> Vihjeet</label>
+    </div>
+    <div id="opponents"></div>
+    <div id="center">
+      <div class="pile">
+        <div class="cap">Pakka (<span id="deckCount"></span>)</div>
+        <div id="deck"></div>
+      </div>
+      <div class="pile">
+        <div class="cap" id="discardCap">Poistopino</div>
+        <div id="discard"></div>
+      </div>
+    </div>
+    <div id="myMelds"></div>
+    <div id="msg"></div>
+    <div id="pending"></div>
+    <div id="handwrap">
+      <div id="hand"></div>
+      <div id="actions"></div>
+    </div>
+  </div>
+
+  <!-- Loppu -->
+  <div id="over"><div class="box">
+    <h2 id="overTitle"></h2>
+    <table id="overTable"></table>
+    <button id="againBtn">Uusi jako</button>
+  </div></div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

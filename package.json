@@ -1,0 +1,12 @@
+{
+  "name": "mokki-canasta",
+  "version": "0.1.0",
+  "description": "Annelin Canasta — 1-4 pelaajaa, Annelin saannoilla",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "itest": "node scripts/itest.mjs",
+    "start": "node server.mjs"
+  },
+  "license": "MIT"
+}
