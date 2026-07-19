@@ -2,14 +2,16 @@
 import { cardValue, isWild } from './cards.js';
 import { meldScore } from './melds.js';
 
-// Avausraja kertyneen pistemaaran mukaan (Annelin saannot).
+// Avausraja kertyneen pistemaaran mukaan.
 export function openingRequirement(teamScore) {
   if (teamScore >= 3000) return 120;
   if (teamScore >= 1500) return 90;
+  if (teamScore < 0) return 15; // miinuksella vain 15
   return 50;
 }
 
 export const GO_OUT_BONUS = 100; // "pohjat": lopetusbonus
+export const CONCEALED_GO_OUT_BONUS = 200; // piilo-ulostulo (kaikki yhdella vuorolla)
 export const RED_THREE_EACH = 100; // punainen 3 avauksen jalkeen
 export const ALL_RED_THREES = 800; // kaikki 4 punaista
 export const WIN_SCORE = 5000;
@@ -26,7 +28,7 @@ export function redThreeScore(count, hasOpened) {
 // Palauttaa erittelyn ja loppusumman.
 export function scoreTeamHand(team) {
   const meldPoints = team.melds.reduce((sum, m) => sum + meldScore(m), 0);
-  const goOut = team.wentOut ? GO_OUT_BONUS : 0;
+  const goOut = team.wentOut ? (team.wentOutConcealed ? CONCEALED_GO_OUT_BONUS : GO_OUT_BONUS) : 0;
   const redThrees = redThreeScore(team.redThrees, team.hasOpened);
   const handPenalty = team.hand.reduce((sum, c) => sum + cardValue(c), 0);
 

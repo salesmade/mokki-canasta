@@ -55,7 +55,9 @@ function validateMeld(cards) {
   }
   const rank = naturals[0].rank;
   if (rank === "3") {
-    return { valid: false, error: "Kolmosia ei lasketa normaalina sarjana" };
+    if (wilds.length > 0) return { valid: false, error: "Kolmossarjaan ei saa laittaa villej\xE4" };
+    if (!naturals.every(isBlackThree)) return { valid: false, error: "Kolmosia ei lasketa normaalina sarjana" };
+    return { valid: true, rank: "3", clean: true, wilds: 0, blackThrees: true };
   }
   if (naturals.some((c) => c.rank !== rank)) {
     return { valid: false, error: "Kaikkien luonnollisten oltava samaa numeroa" };
@@ -80,9 +82,11 @@ function meldScore(cards) {
 function openingRequirement(teamScore) {
   if (teamScore >= 3e3) return 120;
   if (teamScore >= 1500) return 90;
+  if (teamScore < 0) return 15;
   return 50;
 }
 var GO_OUT_BONUS = 100;
+var CONCEALED_GO_OUT_BONUS = 200;
 var RED_THREE_EACH = 100;
 var ALL_RED_THREES = 800;
 function redThreeScore(count, hasOpened) {
@@ -92,7 +96,7 @@ function redThreeScore(count, hasOpened) {
 }
 function scoreTeamHand(team) {
   const meldPoints = team.melds.reduce((sum, m) => sum + meldScore(m), 0);
-  const goOut = team.wentOut ? GO_OUT_BONUS : 0;
+  const goOut = team.wentOut ? team.wentOutConcealed ? CONCEALED_GO_OUT_BONUS : GO_OUT_BONUS : 0;
   const redThrees = redThreeScore(team.redThrees, team.hasOpened);
   const handPenalty = team.hand.reduce((sum, c) => sum + cardValue(c), 0);
   const tablePoints = team.hasOpened ? meldPoints + goOut : 0;
@@ -143,6 +147,7 @@ var Game = class _Game {
     this._deal(HAND_SIZES[n]);
     this._resolveInitialRedThrees();
     this._flipStartCard();
+    this.turnOpenedStart = this.teamOf(this.turn).hasOpened;
   }
   // ---- Alustus ----
   _deal(handSize) {
@@ -188,6 +193,7 @@ var Game = class _Game {
       phase: this.phase,
       roundOver: this.roundOver,
       wentOutPlayer: this.wentOutPlayer,
+      turnOpenedStart: this.turnOpenedStart,
       log: this.log,
       players: this.players.map((p) => ({
         id: p.id,
@@ -219,6 +225,7 @@ var Game = class _Game {
     g.log = s.log || [];
     g.players = s.players;
     g.teams = s.teams;
+    g.turnOpenedStart = s.turnOpenedStart ?? g.teamOf(g.turn).hasOpened;
     return g;
   }
   // ---- Apurit ----
@@ -234,6 +241,7 @@ var Game = class _Game {
   _next() {
     this.turn = (this.turn + 1) % this.players.length;
     this.phase = "draw";
+    this.turnOpenedStart = this.teamOf(this.turn).hasOpened;
   }
   _err(msg) {
     return { ok: false, error: msg };
@@ -366,6 +374,10 @@ var Game = class _Game {
     if (remaining < 2 && !willHaveCanasta) {
       return this._err("Pid\xE4 v\xE4hint\xE4\xE4n 2 korttia \u2014 et voi menn\xE4 ulos ilman canastaa");
     }
+    const hasBlackThreeMeld = resolved.some((r) => r.rank === "3");
+    if (hasBlackThreeMeld && !(willHaveCanasta && remaining <= 1)) {
+      return this._err("Mustat kolmoset saa laskea vain lopettaessa (canasta p\xF6yd\xE4ss\xE4)");
+    }
     for (const r of resolved) {
       for (const c of r.cards) {
         const idx = player.hand.findIndex((h) => h.id === c.id);
@@ -393,6 +405,7 @@ var Game = class _Game {
     this.log.push(`${player.name} heitti ${card.rank}`);
     if (player.hand.length === 0) {
       this.wentOutPlayer = this.turn;
+      this.teamOf(this.turn).wentOutConcealed = !this.turnOpenedStart;
       return this._endRound("ulos");
     }
     this._next();
@@ -411,7 +424,8 @@ var Game = class _Game {
         redThrees: team.redThrees,
         hand,
         hasOpened: team.hasOpened,
-        wentOut
+        wentOut,
+        wentOutConcealed: wentOut && team.wentOutConcealed
       });
       team.score += r.total;
       return { teamId: team.id, ...r, newScore: team.score };

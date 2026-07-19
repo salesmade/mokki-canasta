@@ -1,5 +1,5 @@
 // Sarjojen (melds) tarkistus ja canasta-logiikka — Annelin Canasta.
-import { isWild, cardValue } from './cards.js';
+import { isWild, cardValue, isBlackThree } from './cards.js';
 
 // Tarkistaa onko korttijoukko laillinen sarja.
 // Palauttaa { valid, rank, clean, wilds, error }.
@@ -18,7 +18,11 @@ export function validateMeld(cards) {
   }
   const rank = naturals[0].rank;
   if (rank === '3') {
-    return { valid: false, error: 'Kolmosia ei lasketa normaalina sarjana' };
+    // Mustan kolmosen sarja: sallittu vain luonnollisilla mustilla kolmosilla (ei villejä).
+    // (Moottori sallii sen laskemisen vain ulos mennessa.)
+    if (wilds.length > 0) return { valid: false, error: 'Kolmossarjaan ei saa laittaa villejä' };
+    if (!naturals.every(isBlackThree)) return { valid: false, error: 'Kolmosia ei lasketa normaalina sarjana' };
+    return { valid: true, rank: '3', clean: true, wilds: 0, blackThrees: true };
   }
   if (naturals.some((c) => c.rank !== rank)) {
     return { valid: false, error: 'Kaikkien luonnollisten oltava samaa numeroa' };

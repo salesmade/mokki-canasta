@@ -26,7 +26,8 @@
 ## Avaus (ensimmäinen laskeminen pöytään)
 - Pöytäarvon oltava vähintään avausraja (vain korttien+villien pistearvot, ei bonuksia).
 - Avausraja nousee kertyneen pistemäärän mukaan:
-  - alle 1500 p → 50 p
+  - alle 0 p → 15 p (standardi-Canasta, ei Annelin paperissa; lisätty)
+  - 0–1500 p → 50 p
   - 1500–3000 p → 90 p
   - yli 3000 p → 120 p
 - Avata voi myös nostamalla pinon: kädessä 2 samaa kuin pinon päällin kortti (näytettävä ensin), yhteissumman täytettävä avausraja.
@@ -42,11 +43,11 @@
 - Punainen 3: pöytään heti vuorolla, nosta uusi kortti tilalle.
   - avauksen jälkeen +100 p, ilman avausta −100 p
   - kaikki 4 punaista = 800 p (ilman avausta −800 p)
-- Musta 3: heitettynä pinoon estää seuraavan noston. Vähintään 3 mustaa saa laskea pöytään vain lopettaessa (ei villejä mukaan).
+- Musta 3: heitettynä pinoon estää seuraavan noston. Vähintään 3 mustaa saa laskea pöytään vain lopettaessa (ei villejä mukaan). [Toteutettu: sallittu vain kun joukkueella canasta ja menossa ulos.]
 
 ## Loppu ja pistelasku
 - Peli päättyy kun pari saa 5000 pistettä.
-- Lopetusbonus ("pohjat") = 100 p.
+- Lopetusbonus ("pohjat") = 100 p. Piilo-ulostulo (avaus + ulos samalla vuorolla, ei aiempaa avausta) = 200 p (standardi-Canasta; lisätty).
 - Bonukset ("pohjat"): lopetus 100, punaiset 3:t, puhdas canasta 500, likainen 300.
 - Pöydän korttipisteisiin lisätään bonukset, ja siitä vähennetään kädessä jääneet kortit.
 - Ilman avausta kaikki kädessä jääneet ovat miinusta.

@@ -46,6 +46,8 @@ export class Game {
     this._deal(HAND_SIZES[n]);
     this._resolveInitialRedThrees();
     this._flipStartCard();
+    // Oliko vuorossa olevan joukkue jo avannut vuoron alkaessa (piilo-ulostuloa varten).
+    this.turnOpenedStart = this.teamOf(this.turn).hasOpened;
   }
 
   // ---- Alustus ----
@@ -93,7 +95,7 @@ export class Game {
     return {
       deck: this.deck, discard: this.discard, frozen: this.frozen, turn: this.turn,
       phase: this.phase, roundOver: this.roundOver, wentOutPlayer: this.wentOutPlayer,
-      log: this.log,
+      turnOpenedStart: this.turnOpenedStart, log: this.log,
       players: this.players.map((p) => ({
         id: p.id, name: p.name, isBot: p.isBot, teamId: p.teamId, hand: p.hand,
       })),
@@ -111,6 +113,7 @@ export class Game {
     g.turn = s.turn; g.phase = s.phase; g.roundOver = s.roundOver;
     g.wentOutPlayer = s.wentOutPlayer; g.log = s.log || [];
     g.players = s.players; g.teams = s.teams;
+    g.turnOpenedStart = s.turnOpenedStart ?? g.teamOf(g.turn).hasOpened;
     return g;
   }
 
@@ -123,6 +126,7 @@ export class Game {
   _next() {
     this.turn = (this.turn + 1) % this.players.length;
     this.phase = 'draw';
+    this.turnOpenedStart = this.teamOf(this.turn).hasOpened;
   }
 
   _err(msg) { return { ok: false, error: msg }; }
@@ -275,6 +279,12 @@ export class Game {
       return this._err('Pidä vähintään 2 korttia — et voi mennä ulos ilman canastaa');
     }
 
+    // Mustat kolmoset saa laskea vain lopettaessa (canasta pöydässä ja menossa ulos).
+    const hasBlackThreeMeld = resolved.some((r) => r.rank === '3');
+    if (hasBlackThreeMeld && !(willHaveCanasta && remaining <= 1)) {
+      return this._err('Mustat kolmoset saa laskea vain lopettaessa (canasta pöydässä)');
+    }
+
     // Toteuta: poista kadesta, lisää sarjoihin.
     for (const r of resolved) {
       for (const c of r.cards) {
@@ -308,6 +318,8 @@ export class Game {
 
     if (player.hand.length === 0) {
       this.wentOutPlayer = this.turn;
+      // Piilo-ulostulo: joukkue ei ollut avannut ennen tätä vuoroa.
+      this.teamOf(this.turn).wentOutConcealed = !this.turnOpenedStart;
       return this._endRound('ulos');
     }
     this._next();
@@ -330,6 +342,7 @@ export class Game {
         hand,
         hasOpened: team.hasOpened,
         wentOut,
+        wentOutConcealed: wentOut && team.wentOutConcealed,
       });
       team.score += r.total;
       return { teamId: team.id, ...r, newScore: team.score };

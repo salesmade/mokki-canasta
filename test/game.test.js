@@ -93,6 +93,7 @@ test('ulos meno canastalla: pisteet lasketaan (canasta 500 + pohjat 100)', () =>
   g.turn = 0;
   const team = g.teamOf(0);
   team.hasOpened = true;
+  g.turnOpenedStart = true; // avasi jo aiemmalla vuorolla -> ei piilo-ulostulo
   // Puhdas 7:n canasta pöydassa
   team.melds['7'] = [1, 2, 3, 4, 5, 6, 7].map((n) => card('7', 'H', n));
   g.players[0].hand = [card('9', 'H', 1)]; // heitetaan viimeinen -> ulos
@@ -123,6 +124,40 @@ test('poistopinon nosto: top + pari kadesta sarjaksi, loput kateen', () => {
   assert.ok(g.players[0].hand.some((c) => c.rank === '4'));
   assert.ok(g.players[0].hand.some((c) => c.rank === '9'));
   assert.equal(countCards(g), before);
+});
+
+test('musta kolmonen: esto ilman ulos menoa, sallittu lopettaessa canastalla', () => {
+  const g = new Game({ players: [{}, {}], rng: seededRng(41) });
+  g.phase = 'action';
+  g.turn = 0;
+  const team = g.teamOf(0);
+  team.hasOpened = true;
+  // Ei canastaa: 3 mustaa kolmosta + muuta -> esto
+  g.players[0].hand = [card('3', 'S', 1), card('3', 'C', 1), card('3', 'S', 2), card('9', 'H', 1), card('9', 'S', 1)];
+  let r = g.meld([['3-S-1', '3-C-1', '3-S-2']]);
+  assert.equal(r.ok, false);
+  assert.match(r.error, /lopettaessa|kolmoset/i);
+  // Canasta pöydässä + jää 1 heittokortti -> sallittu
+  team.melds['7'] = [1, 2, 3, 4, 5, 6, 7].map((n) => card('7', 'H', n));
+  g.players[0].hand = [card('3', 'S', 1), card('3', 'C', 1), card('3', 'S', 2), card('9', 'H', 1)];
+  r = g.meld([['3-S-1', '3-C-1', '3-S-2']]);
+  assert.ok(r.ok, r.error);
+  assert.equal(g.teamOf(0).melds['3'].length, 3);
+});
+
+test('piilo-ulostulo: avaus + ulos samalla vuorolla = 200 bonus', () => {
+  const g = new Game({ players: [{}, {}], rng: seededRng(43) });
+  g.phase = 'action';
+  g.turn = 0;
+  g.turnOpenedStart = false; // ei avattu ennen tätä vuoroa
+  const team = g.teamOf(0);
+  team.hasOpened = true; // avasi tänä vuorona
+  team.melds['K'] = [1, 2, 3, 4, 5, 6, 7].map((n) => card('K', 'S', n)); // canasta
+  g.players[0].hand = [card('9', 'H', 1)];
+  const r = g.discardCard('9-H-1');
+  assert.ok(r.ok, r.error);
+  const t0 = r.results.find((x) => x.teamId === 0);
+  assert.equal(t0.goOutBonus, 200);
 });
 
 test('umpikuja-esto: ei saa laskea kättä alle 2 kortin ilman canastaa', () => {

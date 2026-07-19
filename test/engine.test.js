@@ -60,11 +60,6 @@ test('yli 3 villia ei kelpaa', () => {
   assert.equal(r.valid, false);
 });
 
-test('kolmosia ei lasketa normaalina sarjana', () => {
-  const r = validateMeld([c('3', 'S'), c('3', 'C'), c('3', 'S')]);
-  assert.equal(r.valid, false);
-});
-
 test('canasta: puhdas vs likainen tunnistus + pisteet', () => {
   const puhdas = [c('7'), c('7'), c('7'), c('7'), c('7'), c('7'), c('7')];
   const likainen = [c('7'), c('7'), c('7'), c('7'), c('7'), c('2'), joker()];
@@ -78,12 +73,24 @@ test('canasta: puhdas vs likainen tunnistus + pisteet', () => {
   assert.equal(meldScore(likainen), 5 * 5 + 20 + 50 + 300);
 });
 
-test('avausraja nousee pistemaaran mukaan (Anneli 50/90/120)', () => {
+test('avausraja nousee pistemaaran mukaan (15/50/90/120)', () => {
+  assert.equal(openingRequirement(-50), 15); // miinuksella 15
+  assert.equal(openingRequirement(-1), 15);
   assert.equal(openingRequirement(0), 50);
   assert.equal(openingRequirement(1499), 50);
   assert.equal(openingRequirement(1500), 90);
   assert.equal(openingRequirement(2999), 90);
   assert.equal(openingRequirement(3000), 120);
+});
+
+test('mustan kolmosen sarja: 3 mustaa kelpaa, villi/punainen ei', () => {
+  const ok = validateMeld([c('3', 'S'), c('3', 'C'), c('3', 'S')]);
+  assert.equal(ok.valid, true);
+  assert.equal(ok.blackThrees, true);
+  // villi mukana -> ei
+  assert.equal(validateMeld([c('3', 'S'), c('3', 'C'), c('2', 'H')]).valid, false);
+  // punainen kolmonen mukana -> ei
+  assert.equal(validateMeld([c('3', 'S'), c('3', 'H'), c('3', 'C')]).valid, false);
 });
 
 test('avaussumma lasketaan pelkista korttipisteista (ei bonuksia)', () => {
