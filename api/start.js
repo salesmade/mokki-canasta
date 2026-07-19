@@ -378,6 +378,19 @@ var Game = class _Game {
         return this._err(`Avaukseen tarvitaan ${need} p, sarjoissa vain ${points} p`);
       }
     }
+    const totalMelded = resolved.reduce((s, r) => s + r.cards.length, 0);
+    const remaining = player.hand.length - totalMelded;
+    let willHaveCanasta = this.teamHasCanasta(team);
+    for (const r of resolved) {
+      const existingLen = team.melds[r.rank] ? team.melds[r.rank].length : 0;
+      if (existingLen + r.cards.length >= 7) willHaveCanasta = true;
+    }
+    if (remaining === 0) {
+      return this._err("J\xE4t\xE4 v\xE4hint\xE4\xE4n yksi kortti heittoa varten");
+    }
+    if (remaining < 2 && !willHaveCanasta) {
+      return this._err("Pid\xE4 v\xE4hint\xE4\xE4n 2 korttia \u2014 et voi menn\xE4 ulos ilman canastaa");
+    }
     for (const r of resolved) {
       for (const c of r.cards) {
         const idx = player.hand.findIndex((h) => h.id === c.id);

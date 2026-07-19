@@ -58,8 +58,8 @@ test('avaus hylataan alle rajan, hyvaksytaan rajalla', () => {
   p.hand = [card('K', 'H', 1), card('K', 'S', 1), card('K', 'D', 1), card('A', 'H', 1)];
   let r = g.meld([[p.hand[0].id, p.hand[1].id, p.hand[2].id]]);
   assert.equal(r.ok, false);
-  // 3 assaa = 60 p (>= 50) -> ok
-  p.hand = [card('A', 'H', 1), card('A', 'S', 1), card('A', 'D', 1)];
+  // 3 assaa = 60 p (>= 50) -> ok. Kädessä myös 2 muuta korttia (jää heittovaraa).
+  p.hand = [card('A', 'H', 1), card('A', 'S', 1), card('A', 'D', 1), card('4', 'C', 1), card('5', 'C', 1)];
   r = g.meld([[p.hand[0].id, p.hand[1].id, p.hand[2].id]]);
   assert.ok(r.ok, r.error);
   assert.equal(g.teamOf(0).hasOpened, true);
@@ -123,6 +123,32 @@ test('poistopinon nosto: top + pari kadesta sarjaksi, loput kateen', () => {
   assert.ok(g.players[0].hand.some((c) => c.rank === '4'));
   assert.ok(g.players[0].hand.some((c) => c.rank === '9'));
   assert.equal(countCards(g), before);
+});
+
+test('umpikuja-esto: ei saa laskea kättä alle 2 kortin ilman canastaa', () => {
+  const g = new Game({ players: [{}, {}], rng: seededRng(31) });
+  g.phase = 'action';
+  g.turn = 0;
+  g.teamOf(0).hasOpened = true;
+  // 4 korttia: kolme 9:ää + A. Laskisi 9:t -> jäisi 1 (A), ei canastaa -> esto.
+  g.players[0].hand = [card('9', 'H', 1), card('9', 'S', 1), card('9', 'D', 1), card('A', 'C', 1)];
+  const r = g.meld([['9-H-1', '9-S-1', '9-D-1']]);
+  assert.equal(r.ok, false);
+  assert.match(r.error, /2 korttia|canasta/);
+  assert.equal(g.players[0].hand.length, 4); // ei muuttunut
+});
+
+test('canastan kanssa saa laskea kättä 1 korttiin (ulos meno ok)', () => {
+  const g = new Game({ players: [{}, {}], rng: seededRng(33) });
+  g.phase = 'action';
+  g.turn = 0;
+  const team = g.teamOf(0);
+  team.hasOpened = true;
+  team.melds['7'] = [1, 2, 3, 4, 5, 6, 7].map((n) => card('7', 'H', n)); // canasta
+  g.players[0].hand = [card('9', 'H', 1), card('9', 'S', 1), card('9', 'D', 1), card('A', 'C', 1)];
+  const r = g.meld([['9-H-1', '9-S-1', '9-D-1']]);
+  assert.ok(r.ok, r.error);
+  assert.equal(g.players[0].hand.length, 1);
 });
 
 test('jaatynyt pino vaatii 2 luonnollista', () => {

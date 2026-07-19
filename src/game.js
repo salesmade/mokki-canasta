@@ -258,6 +258,23 @@ export class Game {
       }
     }
 
+    // Estä jättämästä kättä tilaan josta ei voi laillisesti heittää (umpikuja).
+    // Ilman canastaa on jäätävä >=2 korttia (heittää yksi, ei mene ulos).
+    // Canastan kanssa >=1 (heittää viimeisen -> ulos).
+    const totalMelded = resolved.reduce((s, r) => s + r.cards.length, 0);
+    const remaining = player.hand.length - totalMelded;
+    let willHaveCanasta = this.teamHasCanasta(team);
+    for (const r of resolved) {
+      const existingLen = team.melds[r.rank] ? team.melds[r.rank].length : 0;
+      if (existingLen + r.cards.length >= 7) willHaveCanasta = true;
+    }
+    if (remaining === 0) {
+      return this._err('Jätä vähintään yksi kortti heittoa varten');
+    }
+    if (remaining < 2 && !willHaveCanasta) {
+      return this._err('Pidä vähintään 2 korttia — et voi mennä ulos ilman canastaa');
+    }
+
     // Toteuta: poista kadesta, lisää sarjoihin.
     for (const r of resolved) {
       for (const c of r.cards) {

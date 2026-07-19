@@ -65,7 +65,7 @@ $('joinBtn').onclick = () => {
 };
 $('hintChk').onchange = (e) => { hintsOn = e.target.checked; render(); };
 $('lobbyStart').onclick = async () => { await api('/api/start', { code: net.code }); pollOnce(); };
-$('againBtn').onclick = () => {
+function newDeal() {
   if (mode === 'online') { api('/api/next', { code: net.code }).then(pollOnce); $('over').style.display = 'none'; return; }
   const scores = game.teams.map((t) => t.score);
   const players = game.players.map((p) => ({ name: p.name, isBot: p.isBot }));
@@ -73,7 +73,8 @@ $('againBtn').onclick = () => {
   selected = new Set(); staged = [];
   $('over').style.display = 'none';
   render(); maybeRunBots();
-};
+}
+$('againBtn').onclick = newDeal;
 
 function myName() { return ($('playerName') && $('playerName').value) || 'Sinä'; }
 
@@ -334,6 +335,14 @@ function renderActions(myTurn) {
       : (selected.size >= 1 && V.discardTop);
     mk('Ota poistopino', false, !canTake, doTakePile);
   } else if (V.phase === 'action') {
+    // Umpikuja: kädessä ei laillista heittoa (0 korttia, tai 1 kortti ilman canastaa).
+    const canGoOut = myTeam().melds.some((m) => m.canasta);
+    const stuck = myHand().length === 0 || (myHand().length === 1 && !canGoOut);
+    if (stuck) {
+      flash('Jäit umpikujaan (ei korttia heittoon ilman ulos menoa). Aloita uusi jako.', 'warn');
+      mk('🔄 Uusi jako', true, false, newDeal);
+      return;
+    }
     mk('Lisää ryhmä', false, selected.size < 1, stageGroup);
     mk('Laske pöytään', false, staged.length === 0, commitMelds);
     if (staged.length) mk('Peru laskut', false, false, () => { staged = []; render(); });

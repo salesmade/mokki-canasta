@@ -353,6 +353,19 @@ var Game = class _Game {
         return this._err(`Avaukseen tarvitaan ${need} p, sarjoissa vain ${points} p`);
       }
     }
+    const totalMelded = resolved.reduce((s, r) => s + r.cards.length, 0);
+    const remaining = player.hand.length - totalMelded;
+    let willHaveCanasta = this.teamHasCanasta(team);
+    for (const r of resolved) {
+      const existingLen = team.melds[r.rank] ? team.melds[r.rank].length : 0;
+      if (existingLen + r.cards.length >= 7) willHaveCanasta = true;
+    }
+    if (remaining === 0) {
+      return this._err("J\xE4t\xE4 v\xE4hint\xE4\xE4n yksi kortti heittoa varten");
+    }
+    if (remaining < 2 && !willHaveCanasta) {
+      return this._err("Pid\xE4 v\xE4hint\xE4\xE4n 2 korttia \u2014 et voi menn\xE4 ulos ilman canastaa");
+    }
     for (const r of resolved) {
       for (const c of r.cards) {
         const idx = player.hand.findIndex((h) => h.id === c.id);
@@ -2207,7 +2220,7 @@ $("lobbyStart").onclick = async () => {
   await api("/api/start", { code: net.code });
   pollOnce();
 };
-$("againBtn").onclick = () => {
+function newDeal() {
   if (mode === "online") {
     api("/api/next", { code: net.code }).then(pollOnce);
     $("over").style.display = "none";
@@ -2221,7 +2234,8 @@ $("againBtn").onclick = () => {
   $("over").style.display = "none";
   render();
   maybeRunBots();
-};
+}
+$("againBtn").onclick = newDeal;
 function myName() {
   return $("playerName") && $("playerName").value || "Sin\xE4";
 }
@@ -2501,6 +2515,13 @@ function renderActions(myTurn) {
     const canTake = mode === "local" ? game.canTakeDiscard([...selected]).ok : selected.size >= 1 && V.discardTop;
     mk("Ota poistopino", false, !canTake, doTakePile);
   } else if (V.phase === "action") {
+    const canGoOut = myTeam().melds.some((m) => m.canasta);
+    const stuck = myHand().length === 0 || myHand().length === 1 && !canGoOut;
+    if (stuck) {
+      flash("J\xE4it umpikujaan (ei korttia heittoon ilman ulos menoa). Aloita uusi jako.", "warn");
+      mk("\u{1F504} Uusi jako", true, false, newDeal);
+      return;
+    }
     mk("Lis\xE4\xE4 ryhm\xE4", false, selected.size < 1, stageGroup);
     mk("Laske p\xF6yt\xE4\xE4n", false, staged.length === 0, commitMelds);
     if (staged.length) mk("Peru laskut", false, false, () => {
