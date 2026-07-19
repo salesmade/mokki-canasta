@@ -289,14 +289,18 @@ function paint() {
     el.innerHTML = `<div class="name">${esc(p.name)}${p.isBot ? ' 🤖' : ''}</div>
       <div class="cnt">${p.handCount} korttia${team.hasOpened ? ' · avannut' : ''}</div>
       <div class="melds">${melds || '—'}</div>`;
-    // Peek: näytä bottien kädet (ei koskaan ihmisvastustajien)
+    // Peek: näytä bottien kädet tiiviinä tekstirivinä (ei koskaan ihmisvastustajien)
     if (peekBots && p.isBot && Array.isArray(p.hand)) {
-      const hrow = document.createElement('div');
-      hrow.style.cssText = 'display:flex;gap:2px;flex-wrap:wrap;margin-top:5px';
       const ord = ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2', 'JOKER'];
-      [...p.hand].sort((a, b) => ord.indexOf(a.rank) - ord.indexOf(b.rank))
-        .forEach((c) => hrow.appendChild(cardEl(c, { small: true })));
-      el.appendChild(hrow);
+      const line = document.createElement('div');
+      line.style.cssText = 'font-size:.9rem;margin-top:5px;line-height:1.6;font-weight:700';
+      line.innerHTML = [...p.hand].sort((a, b) => ord.indexOf(a.rank) - ord.indexOf(b.rank))
+        .map((c) => {
+          const red = c.suit === 'H' || c.suit === 'D';
+          const label = c.rank === 'JOKER' ? '★J' : c.rank + (SUIT[c.suit] || '');
+          return `<span style="color:${red ? '#ff9a8a' : '#e8e8e8'};margin-right:7px;white-space:nowrap">${label}</span>`;
+        }).join('');
+      el.appendChild(line);
     }
     opp.appendChild(el);
   });

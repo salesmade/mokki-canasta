@@ -149,9 +149,9 @@
     #over td { padding: 4px 8px; text-align: left; }
     #over button { font-size: 1.2rem; padding: 12px 28px; border-radius: 12px; border: none; background: var(--gold); cursor: pointer; }
 
-    /* Iso tila = isommat kortit isoäidille */
-    body.big .card { width: 82px; height: 116px; }
-    body.big .card .r { font-size: 1.7rem; }
+    /* Iso tila = isommat kortit isoäidille (ei koske small-kortteja) */
+    body.big .card:not(.small) { width: 82px; height: 116px; }
+    body.big .card:not(.small) .r { font-size: 1.7rem; }
     body.big #hand { min-height: 140px; }
   </style>
 </head>
