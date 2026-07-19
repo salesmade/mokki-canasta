@@ -272,6 +272,8 @@ function hintRanks() {
 
 function paint() {
   const myTurn = V.turn === V.seat && !V.roundOver;
+  const dtop = V.discardTop;
+  const pileTakeable = myTurn && V.phase === 'draw' && dtop && !isWild(dtop) && dtop.rank !== '3';
 
   $('scores').textContent = V.teams
     .map((t) => `${t.playerIdxs.map((i) => V.players[i].name).join('+')}: ${t.score}`).join('   |   ');
@@ -308,8 +310,15 @@ function paint() {
   $('deckCount').textContent = V.deckCount;
   $('deck').innerHTML = ''; $('deck').appendChild(cardEl(null, { faceDown: true }));
   $('discard').innerHTML = '';
-  if (V.discardTop) $('discard').appendChild(cardEl(V.discardTop));
-  $('discardCap').textContent = 'Poistopino' + (V.frozen ? ' 🧊 (jäätynyt)' : '');
+  if (V.discardTop) {
+    const dc = cardEl(V.discardTop);
+    if (pileTakeable) dc.classList.add('canfetch');
+    $('discard').appendChild(dc);
+  }
+  $('discard').onclick = pileTakeable ? onDiscardClick : null;
+  $('discard').style.cursor = pileTakeable ? 'pointer' : 'default';
+  $('discardCap').textContent = 'Poistopino' + (V.frozen ? ' 🧊 (jäätynyt)' : '')
+    + (pileTakeable ? ' · napauta ottaaksesi' : '');
 
   const mm = $('myMelds'); mm.innerHTML = '';
   const team = myTeam();
@@ -328,12 +337,10 @@ function paint() {
 
   const hints = hintsOn ? hintRanks() : new Set();
   // Kortit joilla voi ottaa poistopinon.
-  const top = V.discardTop;
-  const takeable = myTurn && V.phase === 'draw' && top && !isWild(top) && top.rank !== '3';
-  const canFetchRank = takeable ? top.rank : null;
-  const naturalsMatch = takeable ? myHand().filter((c) => !isWild(c) && c.rank === top.rank).length : 0;
+  const canFetchRank = pileTakeable ? dtop.rank : null;
+  const naturalsMatch = pileTakeable ? myHand().filter((c) => !isWild(c) && c.rank === dtop.rank).length : 0;
   // Villi kelpaa avuksi vain ei-jäätyneenä ja kun on ainakin 1 luonnollinen osuma.
-  const highlightWilds = takeable && !V.frozen && naturalsMatch >= 1;
+  const highlightWilds = pileTakeable && !V.frozen && naturalsMatch >= 1;
   const stagedIds = new Set(staged.flat());
   const hand = $('hand'); hand.innerHTML = '';
   const order = ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2', 'JOKER'];
@@ -402,9 +409,9 @@ function renderMessage(myTurn, hints) {
     const top = V.discardTop;
     if (top && !isWild(top) && top.rank !== '3') {
       if (V.frozen) {
-        m.textContent = `Nosta pakasta — tai ota jäätynyt pino: valitse 2 luonnollista ${top.rank}:ta (villi ei kelpaa). Siniset kortit.`;
+        m.textContent = `Nosta pakasta — tai napauta jäätynyttä pinoa (tarvitset 2 luonnollista ${top.rank}:ta, siniset kortit).`;
       } else {
-        m.textContent = `Nosta pakasta — tai ota poistopino: valitse 2 kertaa ${top.rank}, TAI 1 ${top.rank} + apukortti (villi). Siniset kortit.`;
+        m.textContent = `Nosta pakasta — tai napauta poistopinoa ottaaksesi sen (2× ${top.rank}, tai 1 ${top.rank} + villi; siniset kortit).`;
       }
     } else {
       m.textContent = 'Nosta pakasta. (Poistopinoa ei voi ottaa: päällä villi tai musta 3.)';
@@ -451,6 +458,24 @@ async function doTakePile() {
     const r = await api('/api/move', { code: net.code, seat: net.seat, move: { type: 'take', cards: [...selected] } });
     if (r.error) return flash(r.error); selected.clear(); if (r.view) handleSnapshot(r.view);
   }
+}
+
+// Poimi automaattisesti kortit joilla pinon voi ottaa (2 samaa, tai 1 sama + villi).
+function autoFetchIds() {
+  const top = V.discardTop;
+  if (!top || isWild(top) || top.rank === '3') return null;
+  const naturals = myHand().filter((c) => !isWild(c) && c.rank === top.rank);
+  const wilds = myHand().filter(isWild);
+  if (naturals.length >= 2) return [naturals[0].id, naturals[1].id];
+  if (!V.frozen && naturals.length >= 1 && wilds.length >= 1) return [naturals[0].id, wilds[0].id];
+  return null;
+}
+// Napauta poistopinoa ottaaksesi sen (valitsee kortit puolestasi).
+function onDiscardClick() {
+  const ids = autoFetchIds();
+  if (!ids) { flash('Et voi ottaa pinoa nyt (ei sopivia kortteja, tai jäätynyt).', 'warn'); return; }
+  selected = new Set(ids);
+  doTakePile();
 }
 function stageGroup() {
   const ids = [...selected]; const cards = ids.map(findInHand);

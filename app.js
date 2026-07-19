@@ -2463,6 +2463,8 @@ function hintRanks() {
 }
 function paint() {
   const myTurn = V.turn === V.seat && !V.roundOver;
+  const dtop = V.discardTop;
+  const pileTakeable = myTurn && V.phase === "draw" && dtop && !isWild(dtop) && dtop.rank !== "3";
   $("scores").textContent = V.teams.map((t) => `${t.playerIdxs.map((i) => V.players[i].name).join("+")}: ${t.score}`).join("   |   ");
   const cur = V.players[V.turn];
   $("turnInfo").textContent = V.roundOver ? "Jako p\xE4\xE4ttyi" : myTurn ? "\u27A1\uFE0F Sinun vuorosi" : `Vuorossa: ${esc(cur.name)}`;
@@ -2494,8 +2496,14 @@ function paint() {
   $("deck").innerHTML = "";
   $("deck").appendChild(cardEl(null, { faceDown: true }));
   $("discard").innerHTML = "";
-  if (V.discardTop) $("discard").appendChild(cardEl(V.discardTop));
-  $("discardCap").textContent = "Poistopino" + (V.frozen ? " \u{1F9CA} (j\xE4\xE4tynyt)" : "");
+  if (V.discardTop) {
+    const dc = cardEl(V.discardTop);
+    if (pileTakeable) dc.classList.add("canfetch");
+    $("discard").appendChild(dc);
+  }
+  $("discard").onclick = pileTakeable ? onDiscardClick : null;
+  $("discard").style.cursor = pileTakeable ? "pointer" : "default";
+  $("discardCap").textContent = "Poistopino" + (V.frozen ? " \u{1F9CA} (j\xE4\xE4tynyt)" : "") + (pileTakeable ? " \xB7 napauta ottaaksesi" : "");
   const mm = $("myMelds");
   mm.innerHTML = "";
   const team = myTeam();
@@ -2512,11 +2520,9 @@ function paint() {
     mm.appendChild(g);
   }
   const hints = hintsOn ? hintRanks() : /* @__PURE__ */ new Set();
-  const top = V.discardTop;
-  const takeable = myTurn && V.phase === "draw" && top && !isWild(top) && top.rank !== "3";
-  const canFetchRank = takeable ? top.rank : null;
-  const naturalsMatch = takeable ? myHand().filter((c) => !isWild(c) && c.rank === top.rank).length : 0;
-  const highlightWilds = takeable && !V.frozen && naturalsMatch >= 1;
+  const canFetchRank = pileTakeable ? dtop.rank : null;
+  const naturalsMatch = pileTakeable ? myHand().filter((c) => !isWild(c) && c.rank === dtop.rank).length : 0;
+  const highlightWilds = pileTakeable && !V.frozen && naturalsMatch >= 1;
   const stagedIds = new Set(staged.flat());
   const hand = $("hand");
   hand.innerHTML = "";
@@ -2600,9 +2606,9 @@ function renderMessage(myTurn, hints) {
     const top = V.discardTop;
     if (top && !isWild(top) && top.rank !== "3") {
       if (V.frozen) {
-        m.textContent = `Nosta pakasta \u2014 tai ota j\xE4\xE4tynyt pino: valitse 2 luonnollista ${top.rank}:ta (villi ei kelpaa). Siniset kortit.`;
+        m.textContent = `Nosta pakasta \u2014 tai napauta j\xE4\xE4tynytt\xE4 pinoa (tarvitset 2 luonnollista ${top.rank}:ta, siniset kortit).`;
       } else {
-        m.textContent = `Nosta pakasta \u2014 tai ota poistopino: valitse 2 kertaa ${top.rank}, TAI 1 ${top.rank} + apukortti (villi). Siniset kortit.`;
+        m.textContent = `Nosta pakasta \u2014 tai napauta poistopinoa ottaaksesi sen (2\xD7 ${top.rank}, tai 1 ${top.rank} + villi; siniset kortit).`;
       }
     } else {
       m.textContent = "Nosta pakasta. (Poistopinoa ei voi ottaa: p\xE4\xE4ll\xE4 villi tai musta 3.)";
@@ -2656,6 +2662,24 @@ async function doTakePile() {
     selected.clear();
     if (r.view) handleSnapshot(r.view);
   }
+}
+function autoFetchIds() {
+  const top = V.discardTop;
+  if (!top || isWild(top) || top.rank === "3") return null;
+  const naturals = myHand().filter((c) => !isWild(c) && c.rank === top.rank);
+  const wilds = myHand().filter(isWild);
+  if (naturals.length >= 2) return [naturals[0].id, naturals[1].id];
+  if (!V.frozen && naturals.length >= 1 && wilds.length >= 1) return [naturals[0].id, wilds[0].id];
+  return null;
+}
+function onDiscardClick() {
+  const ids = autoFetchIds();
+  if (!ids) {
+    flash("Et voi ottaa pinoa nyt (ei sopivia kortteja, tai j\xE4\xE4tynyt).", "warn");
+    return;
+  }
+  selected = new Set(ids);
+  doTakePile();
 }
 function stageGroup() {
   const ids = [...selected];
