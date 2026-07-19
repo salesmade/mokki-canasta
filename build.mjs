@@ -1,27 +1,23 @@
-// Build: bundlaa KAIKKI itsenäisiksi tiedostoiksi esbuildilla.
-// Lopputuloksessa ei yhtään ../src-importtia -> Vercelillä ei voi tulla "Cannot find module".
-//   web/app.js        -> public/app.js   (selain, self-contained)
-//   functions/*.js    -> api/*.js         (serverless-funktiot, self-contained)
+// Build: bundlaa kaiken itsenäisiksi tiedostoiksi. Staattiset JUUREEN, funktiot api/:iin.
+//   web/app.js     -> app.js        (juuri, selain, self-contained, @vercel/static)
+//   web/index.html -> index.html    (juuri)
+//   functions/*.js -> api/*.js       (CommonJS, self-contained, @vercel/node)
 import { build } from 'esbuild';
-import { mkdirSync, copyFileSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 
-// --- Selain ---
-rmSync('public', { recursive: true, force: true });
-mkdirSync('public', { recursive: true });
+// --- Selain juureen (staattinen) ---
 await build({
   entryPoints: ['web/app.js'],
-  outfile: 'public/app.js',
+  outfile: 'app.js',
   bundle: true,
   format: 'esm',
   target: 'es2020',
 });
-// index.html viittaa /app.js:aan
-writeFileSync('public/index.html', readFileSync('web/index.html', 'utf8').replace('/web/app.js', '/app.js'));
+writeFileSync('index.html', readFileSync('web/index.html', 'utf8').replace('/web/app.js', '/app.js'));
 
-// --- Serverless-funktiot (CommonJS = Vercelin luotettavin funktiomuoto) ---
+// --- Funktiot api/:iin (CommonJS) ---
 rmSync('api', { recursive: true, force: true });
 mkdirSync('api', { recursive: true });
-// Ohita juuren "type":"module" api-kansiossa -> .js on CommonJS Vercelin funktioille.
 writeFileSync('api/package.json', JSON.stringify({ type: 'commonjs' }, null, 2) + '\n');
 const FUNCTIONS = ['create', 'join', 'start', 'move', 'next', 'state', 'ping'];
 for (const name of FUNCTIONS) {
@@ -35,4 +31,6 @@ for (const name of FUNCTIONS) {
   });
 }
 
-console.log('build valmis: public/ (index.html, app.js) + api/ (' + FUNCTIONS.join(', ') + ')');
+// Vanha public/ pois
+rmSync('public', { recursive: true, force: true });
+console.log('build valmis: index.html + app.js (juuri) + api/ (' + FUNCTIONS.join(', ') + ')');
