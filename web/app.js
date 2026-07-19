@@ -327,9 +327,13 @@ function paint() {
   }
 
   const hints = hintsOn ? hintRanks() : new Set();
-  // Kortit joilla voi ottaa poistopinon (2 samaa kuin pinon päällin kortti).
+  // Kortit joilla voi ottaa poistopinon.
   const top = V.discardTop;
-  const canFetchRank = (myTurn && V.phase === 'draw' && top && !isWild(top) && top.rank !== '3') ? top.rank : null;
+  const takeable = myTurn && V.phase === 'draw' && top && !isWild(top) && top.rank !== '3';
+  const canFetchRank = takeable ? top.rank : null;
+  const naturalsMatch = takeable ? myHand().filter((c) => !isWild(c) && c.rank === top.rank).length : 0;
+  // Villi kelpaa avuksi vain ei-jäätyneenä ja kun on ainakin 1 luonnollinen osuma.
+  const highlightWilds = takeable && !V.frozen && naturalsMatch >= 1;
   const stagedIds = new Set(staged.flat());
   const hand = $('hand'); hand.innerHTML = '';
   const order = ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2', 'JOKER'];
@@ -341,6 +345,7 @@ function paint() {
       if (selected.has(c.id)) el.classList.add('sel');
       if (hints.has(c.rank) && !isWild(c)) el.classList.add('hint');
       if (canFetchRank && !isWild(c) && c.rank === canFetchRank) el.classList.add('canfetch');
+      if (highlightWilds && isWild(c)) el.classList.add('canfetch');
       if (c.id === lastDrawnId) {
         el.classList.add('justdrew');
         if (lastDrawnId !== scrolledForId && el.scrollIntoView) {
@@ -396,7 +401,11 @@ function renderMessage(myTurn, hints) {
   if (V.phase === 'draw') {
     const top = V.discardTop;
     if (top && !isWild(top) && top.rank !== '3') {
-      m.textContent = `Nosta pakasta — tai ota poistopino valitsemalla kädestä 2 korttia arvoa ${top.rank} (korostettu sinisellä).`;
+      if (V.frozen) {
+        m.textContent = `Nosta pakasta — tai ota jäätynyt pino: valitse 2 luonnollista ${top.rank}:ta (villi ei kelpaa). Siniset kortit.`;
+      } else {
+        m.textContent = `Nosta pakasta — tai ota poistopino: valitse 2 kertaa ${top.rank}, TAI 1 ${top.rank} + apukortti (villi). Siniset kortit.`;
+      }
     } else {
       m.textContent = 'Nosta pakasta. (Poistopinoa ei voi ottaa: päällä villi tai musta 3.)';
     }
