@@ -286,9 +286,10 @@ function paint() {
     if (p.seat === V.seat) return;
     const team = V.teams.find((t) => t.id === p.teamId);
     const melds = team.melds.map((m) => `${m.rank}×${m.cards.length}${m.canasta ? '⭐' : ''}`).join(' ');
+    const isPartner = p.teamId === myTeam().id;
     const el = document.createElement('div');
-    el.className = 'opp' + (V.turn === p.seat ? ' active' : '');
-    el.innerHTML = `<div class="name">${esc(p.name)}${p.isBot ? ' 🤖' : ''}</div>
+    el.className = 'opp' + (V.turn === p.seat ? ' active' : '') + (isPartner ? ' partner' : '');
+    el.innerHTML = `<div class="name">${esc(p.name)}${p.isBot ? ' 🤖' : ''}${isPartner ? ' 🤝 parisi' : ''}</div>
       <div class="cnt">${p.handCount} korttia${team.hasOpened ? ' · avannut' : ''}</div>
       <div class="melds">${melds || '—'}</div>`;
     // Peek: näytä bottien kädet tiiviinä tekstirivinä (ei koskaan ihmisvastustajien)
@@ -322,7 +323,16 @@ function paint() {
 
   const mm = $('myMelds'); mm.innerHTML = '';
   const team = myTeam();
-  if (!team.melds.length) mm.innerHTML = '<span style="opacity:.6">Ei vielä sarjoja</span>';
+  // Otsikko: kenen sarjat (paripelissä yhteiset parin kanssa).
+  const partners = team.playerIdxs.filter((i) => i !== V.seat).map((i) => esc(V.players[i].name));
+  const lbl = document.createElement('span');
+  lbl.style.cssText = 'opacity:.75;font-size:.8rem;margin-right:10px;align-self:center;white-space:nowrap';
+  lbl.innerHTML = partners.length ? `Teidän sarjat<br>(sinä + ${partners.join(', ')})` : 'Sinun sarjat';
+  mm.appendChild(lbl);
+  if (!team.melds.length) {
+    const e = document.createElement('span'); e.style.opacity = '.6'; e.textContent = 'ei vielä sarjoja';
+    mm.appendChild(e);
+  }
   for (const m of team.melds) {
     const g = document.createElement('div'); g.className = 'meldgroup';
     if (m.canasta) {

@@ -2474,9 +2474,10 @@ function paint() {
     if (p.seat === V.seat) return;
     const team2 = V.teams.find((t) => t.id === p.teamId);
     const melds = team2.melds.map((m) => `${m.rank}\xD7${m.cards.length}${m.canasta ? "\u2B50" : ""}`).join(" ");
+    const isPartner = p.teamId === myTeam().id;
     const el = document.createElement("div");
-    el.className = "opp" + (V.turn === p.seat ? " active" : "");
-    el.innerHTML = `<div class="name">${esc(p.name)}${p.isBot ? " \u{1F916}" : ""}</div>
+    el.className = "opp" + (V.turn === p.seat ? " active" : "") + (isPartner ? " partner" : "");
+    el.innerHTML = `<div class="name">${esc(p.name)}${p.isBot ? " \u{1F916}" : ""}${isPartner ? " \u{1F91D} parisi" : ""}</div>
       <div class="cnt">${p.handCount} korttia${team2.hasOpened ? " \xB7 avannut" : ""}</div>
       <div class="melds">${melds || "\u2014"}</div>`;
     if (peekBots && p.isBot && Array.isArray(p.hand)) {
@@ -2507,7 +2508,17 @@ function paint() {
   const mm = $("myMelds");
   mm.innerHTML = "";
   const team = myTeam();
-  if (!team.melds.length) mm.innerHTML = '<span style="opacity:.6">Ei viel\xE4 sarjoja</span>';
+  const partners = team.playerIdxs.filter((i) => i !== V.seat).map((i) => esc(V.players[i].name));
+  const lbl = document.createElement("span");
+  lbl.style.cssText = "opacity:.75;font-size:.8rem;margin-right:10px;align-self:center;white-space:nowrap";
+  lbl.innerHTML = partners.length ? `Teid\xE4n sarjat<br>(sin\xE4 + ${partners.join(", ")})` : "Sinun sarjat";
+  mm.appendChild(lbl);
+  if (!team.melds.length) {
+    const e = document.createElement("span");
+    e.style.opacity = ".6";
+    e.textContent = "ei viel\xE4 sarjoja";
+    mm.appendChild(e);
+  }
   for (const m of team.melds) {
     const g = document.createElement("div");
     g.className = "meldgroup";
