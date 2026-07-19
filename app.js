@@ -2193,6 +2193,7 @@ var V = null;
 var selected = /* @__PURE__ */ new Set();
 var staged = [];
 var hintsOn = true;
+var peekBots = false;
 var busy = false;
 var lastDrawnId = null;
 var scrolledForId = null;
@@ -2230,6 +2231,10 @@ $("joinBtn").onclick = () => {
 };
 $("hintChk").onchange = (e) => {
   hintsOn = e.target.checked;
+  render();
+};
+$("peekChk").onchange = (e) => {
+  peekBots = e.target.checked;
   render();
 };
 $("lobbyStart").onclick = async () => {
@@ -2379,7 +2384,7 @@ function normalizeLocal() {
       isBot: p.isBot,
       teamId: p.teamId,
       handCount: p.hand.length,
-      hand: i === seat ? p.hand : null
+      hand: i === seat || p.isBot ? p.hand : null
     })),
     teams: game.teams.map((t) => ({
       id: t.id,
@@ -2433,6 +2438,13 @@ function cardEl(card, { small = false, faceDown = false } = {}) {
   d.innerHTML = `<div class="r">${card.rank}</div><div class="s">${SUIT[card.suit]}</div>`;
   return d;
 }
+function canastaChip(m) {
+  const clean = m.cards.every((c) => !isWild(c));
+  const d = document.createElement("div");
+  d.className = "canasta-chip " + (clean ? "clean" : "dirty");
+  d.innerHTML = `<div class="cr">${m.rank}</div><div class="cl">canasta</div><div class="cp">${clean ? "500" : "300"}</div><div class="cn">\xD7${m.cards.length}</div>`;
+  return d;
+}
 function render() {
   if (mode === "local") {
     V = normalizeLocal();
@@ -2465,6 +2477,13 @@ function paint() {
     el.innerHTML = `<div class="name">${esc(p.name)}${p.isBot ? " \u{1F916}" : ""}</div>
       <div class="cnt">${p.handCount} korttia${team2.hasOpened ? " \xB7 avannut" : ""}</div>
       <div class="melds">${melds || "\u2014"}</div>`;
+    if (peekBots && p.isBot && Array.isArray(p.hand)) {
+      const hrow = document.createElement("div");
+      hrow.style.cssText = "display:flex;gap:2px;flex-wrap:wrap;margin-top:5px";
+      const ord = ["A", "K", "Q", "J", "10", "9", "8", "7", "6", "5", "4", "3", "2", "JOKER"];
+      [...p.hand].sort((a, b) => ord.indexOf(a.rank) - ord.indexOf(b.rank)).forEach((c) => hrow.appendChild(cardEl(c, { small: true })));
+      el.appendChild(hrow);
+    }
     opp.appendChild(el);
   });
   $("deckCount").textContent = V.deckCount;
@@ -2480,13 +2499,11 @@ function paint() {
   for (const m of team.melds) {
     const g = document.createElement("div");
     g.className = "meldgroup";
-    g.innerHTML = `<span class="lbl">${m.rank}</span>`;
-    m.cards.forEach((c) => g.appendChild(cardEl(c, { small: true })));
     if (m.canasta) {
-      const b = document.createElement("span");
-      b.className = "canasta-badge";
-      b.textContent = m.cards.every((x) => !isWild(x)) ? "\u2B50500" : "\u2B50300";
-      g.appendChild(b);
+      g.appendChild(canastaChip(m));
+    } else {
+      g.innerHTML = `<span class="lbl">${m.rank}</span>`;
+      m.cards.forEach((c) => g.appendChild(cardEl(c, { small: true })));
     }
     mm.appendChild(g);
   }

@@ -36,8 +36,8 @@ export function viewFor(game, seat) {
       isBot: p.isBot,
       teamId: p.teamId,
       handCount: p.hand.length,
-      // Vain oma kasi paljastetaan.
-      hand: i === seat ? p.hand : null,
+      // Oma kasi + bottien kadet paljastetaan (botit eivat ole ihmisia); ihmisvastustajat piilossa.
+      hand: i === seat || p.isBot ? p.hand : null,
     })),
     teams: game.teams.map((t) => ({
       id: t.id,

@@ -36,16 +36,18 @@ test('huone: luonti, liittyminen, aloitus JSONin läpi', () => {
   assert.equal(room.state.players.length, 3);
 });
 
-test('redact: aula ennen aloitusta, peli jälkeen; oma käsi vain omalle', () => {
-  let room = createRoomData('Aimo', 2, 'WXYZ');
+test('redact: aula ennen aloitusta; oma+botti näkyy, ihmisvastustaja ei', () => {
+  let room = createRoomData('Aimo', 3, 'WXYZ');
   const lobby = redactRoom(room, 0);
   assert.equal(lobby.type, 'lobby');
-  startRoomData(room, seededRng(11));
+  joinRoomData(room, 'Toinen'); // seat 1 = ihminen
+  startRoomData(room, seededRng(11)); // seat 2 = botti
   room = roundtrip(room);
   const v0 = redactRoom(room, 0);
   assert.equal(v0.type, 'game');
-  assert.ok(Array.isArray(v0.players[0].hand));
-  assert.equal(v0.players[1].hand, null);
+  assert.ok(Array.isArray(v0.players[0].hand));  // oma
+  assert.equal(v0.players[1].hand, null);        // ihmisvastustaja piilossa
+  assert.ok(Array.isArray(v0.players[2].hand));  // botti näkyy
 });
 
 test('siirto JSONin läpi: vain vuorossa oleva, botit pelaavat, versio kasvaa', () => {

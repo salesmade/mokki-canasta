@@ -28,6 +28,7 @@ let V = null;                  // normalisoitu näkymä (molemmat tilat)
 let selected = new Set();
 let staged = [];
 let hintsOn = true;
+let peekBots = false; // näytä bottien kädet (harjoittelu)
 let busy = false;
 let lastDrawnId = null; // juuri nostettu kortti korostusta varten
 let scrolledForId = null; // ettei vieritetä joka renderillä
@@ -66,6 +67,7 @@ $('joinBtn').onclick = () => {
   joinRoom();
 };
 $('hintChk').onchange = (e) => { hintsOn = e.target.checked; render(); };
+$('peekChk').onchange = (e) => { peekBots = e.target.checked; render(); };
 $('lobbyStart').onclick = async () => { await api('/api/start', { code: net.code }); pollOnce(); };
 function newDeal() {
   if (mode === 'online') { api('/api/next', { code: net.code }).then(pollOnce); $('over').style.display = 'none'; return; }
@@ -204,7 +206,7 @@ function normalizeLocal() {
     discardTop: game.topDiscard(), discardCount: game.discard.length,
     players: game.players.map((p, i) => ({
       seat: i, name: p.name, isBot: p.isBot, teamId: p.teamId,
-      handCount: p.hand.length, hand: i === seat ? p.hand : null,
+      handCount: p.hand.length, hand: (i === seat || p.isBot) ? p.hand : null,
     })),
     teams: game.teams.map((t) => ({
       id: t.id, playerIdxs: t.playerIdxs, redThrees: t.redThrees,
@@ -238,6 +240,16 @@ function cardEl(card, { small = false, faceDown = false } = {}) {
   if (card.rank === 'JOKER') { d.classList.add('joker'); d.innerHTML = `<div class="r">★</div><div class="s">JOKER</div>`; return d; }
   if (RED(card)) d.classList.add('red');
   d.innerHTML = `<div class="r">${card.rank}</div><div class="s">${SUIT[card.suit]}</div>`;
+  return d;
+}
+
+// Tiivistetty canasta yhtenä korttina: puhdas = punainen (500), epäpuhdas = tumma (300).
+function canastaChip(m) {
+  const clean = m.cards.every((c) => !isWild(c));
+  const d = document.createElement('div');
+  d.className = 'canasta-chip ' + (clean ? 'clean' : 'dirty');
+  d.innerHTML = `<div class="cr">${m.rank}</div><div class="cl">canasta</div>`
+    + `<div class="cp">${clean ? '500' : '300'}</div><div class="cn">×${m.cards.length}</div>`;
   return d;
 }
 
@@ -277,6 +289,15 @@ function paint() {
     el.innerHTML = `<div class="name">${esc(p.name)}${p.isBot ? ' 🤖' : ''}</div>
       <div class="cnt">${p.handCount} korttia${team.hasOpened ? ' · avannut' : ''}</div>
       <div class="melds">${melds || '—'}</div>`;
+    // Peek: näytä bottien kädet (ei koskaan ihmisvastustajien)
+    if (peekBots && p.isBot && Array.isArray(p.hand)) {
+      const hrow = document.createElement('div');
+      hrow.style.cssText = 'display:flex;gap:2px;flex-wrap:wrap;margin-top:5px';
+      const ord = ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2', 'JOKER'];
+      [...p.hand].sort((a, b) => ord.indexOf(a.rank) - ord.indexOf(b.rank))
+        .forEach((c) => hrow.appendChild(cardEl(c, { small: true })));
+      el.appendChild(hrow);
+    }
     opp.appendChild(el);
   });
 
@@ -291,12 +312,12 @@ function paint() {
   if (!team.melds.length) mm.innerHTML = '<span style="opacity:.6">Ei vielä sarjoja</span>';
   for (const m of team.melds) {
     const g = document.createElement('div'); g.className = 'meldgroup';
-    g.innerHTML = `<span class="lbl">${m.rank}</span>`;
-    m.cards.forEach((c) => g.appendChild(cardEl(c, { small: true })));
     if (m.canasta) {
-      const b = document.createElement('span'); b.className = 'canasta-badge';
-      b.textContent = m.cards.every((x) => !isWild(x)) ? '⭐500' : '⭐300';
-      g.appendChild(b);
+      // Valmis canasta: tiivistä yhdeksi kortiksi (säästää tilaa).
+      g.appendChild(canastaChip(m));
+    } else {
+      g.innerHTML = `<span class="lbl">${m.rank}</span>`;
+      m.cards.forEach((c) => g.appendChild(cardEl(c, { small: true })));
     }
     mm.appendChild(g);
   }

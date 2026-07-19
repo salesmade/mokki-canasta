@@ -78,6 +78,19 @@
     .meldgroup { display: flex; align-items: center; gap: 2px; }
     .meldgroup .lbl { font-size: .75rem; opacity: .8; margin-right: 4px; }
     .canasta-badge { color: var(--gold); font-weight: 800; margin-left: 4px; }
+    /* Tiivistetty canasta = yksi kortti (punainen=puhdas, tumma=epäpuhdas) + pisteet */
+    .canasta-chip {
+      width: 56px; height: 80px; border-radius: 9px; box-shadow: 0 2px 6px rgba(0,0,0,.4);
+      display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 2px; position: relative; flex: 0 0 auto; border: 2px solid rgba(255,255,255,.25);
+    }
+    .canasta-chip.clean { background: linear-gradient(145deg,#e04a3a,#b02a1c); color: #fff; }
+    .canasta-chip.dirty { background: linear-gradient(145deg,#3a3a3a,#1e1e1e); color: var(--gold); }
+    .canasta-chip .cr { font-size: 1.4rem; font-weight: 800; line-height: 1; }
+    .canasta-chip .cl { font-size: .55rem; letter-spacing: .5px; opacity: .85; text-transform: uppercase; }
+    .canasta-chip .cp { font-size: .95rem; font-weight: 800; }
+    .canasta-chip .cn { position: absolute; bottom: 3px; right: 5px; font-size: .6rem; opacity: .8; }
+    body.big .canasta-chip { width: 74px; height: 104px; }
 
     /* ---- Kortit ---- */
     .card {
@@ -214,6 +227,7 @@
       <span id="turnInfo"></span>
       <span class="spacer"></span>
       <label class="toggle"><input type="checkbox" id="hintChk" /> Vihjeet</label>
+      <label class="toggle"><input type="checkbox" id="peekChk" /> Näytä botit</label>
     </div>
     <div id="opponents"></div>
     <div id="center">

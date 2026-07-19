@@ -43,14 +43,16 @@ test('start tayttaa tyhjat paikat boteilla', () => {
   assert.equal(room.game.players.filter((p) => p.isBot).length, 3);
 });
 
-test('viewFor paljastaa vain oman kaden', () => {
+test('viewFor: oma + bottien kädet näkyvät, ihmisvastustajan ei', () => {
   const rm = new RoomManager(seededRng(11));
-  const room = rm.createRoom('Sinä', 2);
-  rm.start(room.code);
+  const room = rm.createRoom('Sinä', 3);
+  rm.join(room.code, 'Ihminen'); // seat 1 = ihminen
+  rm.start(room.code);           // seat 2 = botti
   const v0 = viewFor(room.game, 0);
-  assert.ok(Array.isArray(v0.players[0].hand)); // oma kasi nakyy
-  assert.equal(v0.players[1].hand, null);       // vastustajan ei
-  assert.ok(v0.players[1].handCount > 0);        // vain lukumaara
+  assert.ok(Array.isArray(v0.players[0].hand)); // oma näkyy
+  assert.equal(v0.players[1].hand, null);       // ihmisvastustaja piilossa
+  assert.ok(Array.isArray(v0.players[2].hand)); // botti näkyy
+  assert.ok(v0.players[1].handCount > 0);       // ihmisestä vain lukumäärä
 });
 
 test('vain vuorossa oleva saa siirtaa', () => {
