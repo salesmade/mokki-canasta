@@ -2194,6 +2194,8 @@ var selected = /* @__PURE__ */ new Set();
 var staged = [];
 var hintsOn = true;
 var busy = false;
+var lastDrawnId = null;
+var scrolledForId = null;
 function bindOpts(containerId, attr, key, after) {
   $(containerId).addEventListener("click", (e) => {
     const b = e.target.closest("button");
@@ -2501,6 +2503,13 @@ function paint() {
     } else {
       if (selected.has(c.id)) el.classList.add("sel");
       if (hints.has(c.rank) && !isWild(c)) el.classList.add("hint");
+      if (c.id === lastDrawnId) {
+        el.classList.add("justdrew");
+        if (lastDrawnId !== scrolledForId && el.scrollIntoView) {
+          scrolledForId = lastDrawnId;
+          setTimeout(() => el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" }), 40);
+        }
+      }
       el.onclick = () => {
         if (selected.has(c.id)) selected.delete(c.id);
         else selected.add(c.id);
@@ -2581,13 +2590,20 @@ async function doDraw() {
     const r = game.drawFromDeck();
     if (!r.ok) return flash(r.error);
     selected.clear();
+    lastDrawnId = r.card ? r.card.id : null;
     if (game.roundOver) return endLocal();
     render();
   } else {
+    const before = new Set(myHand().map((c) => c.id));
     const r = await api("/api/move", { code: net.code, seat: net.seat, move: { type: "draw" } });
     if (r.error) return flash(r.error);
     selected.clear();
-    if (r.view) handleSnapshot(r.view);
+    if (r.view) {
+      const newHand = (r.view.players.find((p) => p.seat === net.seat) || {}).hand || [];
+      const fresh = newHand.find((c) => !before.has(c.id));
+      lastDrawnId = fresh ? fresh.id : null;
+      handleSnapshot(r.view);
+    }
   }
 }
 async function doTakePile() {
@@ -2638,6 +2654,7 @@ async function commitMelds() {
 }
 async function doDiscard() {
   const id = [...selected][0];
+  lastDrawnId = null;
   if (mode === "local") {
     const r = game.discardCard(id);
     if (!r.ok) return flash(r.error);

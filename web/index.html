@@ -95,6 +95,13 @@
     .card.red { color: var(--red); }
     .card.sel { border-color: var(--gold); transform: translateY(-14px); box-shadow: 0 8px 16px rgba(0,0,0,.4); }
     .card.hint { border-color: var(--hi); }
+    .card.justdrew { border-color: #4ade80; box-shadow: 0 0 18px 4px rgba(74,222,128,.75); animation: drewpop .45s ease; }
+    .card.justdrew::after {
+      content: 'UUSI'; position: absolute; top: -11px; left: 50%; transform: translateX(-50%);
+      background: #4ade80; color: #06340f; font-size: .58rem; font-weight: 800; letter-spacing: .5px;
+      padding: 1px 7px; border-radius: 7px; box-shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+    @keyframes drewpop { 0% { transform: translateY(-22px) scale(1.12); } 100% { transform: translateY(0) scale(1); } }
     .card.joker { background: linear-gradient(135deg,#2b2b2b,#444); color: var(--gold); }
 
     #handwrap { background: rgba(0,0,0,.28); padding: 8px 6px 4px; }
