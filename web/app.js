@@ -4,8 +4,15 @@ import { botPlayTurn } from '../src/bot.js';
 import { isWild, isRedThree, isBlackThree, cardValue } from '../src/cards.js';
 import { validateMeld, isCanasta } from '../src/melds.js';
 import { openingRequirement } from '../src/scoring.js';
+import qrcode from 'qrcode-generator';
 
 const $ = (id) => document.getElementById(id);
+
+// --- Sessio (reconnect): tallenna huone+paikka, jotta sivun lataus liittää takaisin ---
+const SESSION_KEY = 'mokkiCanasta.session';
+function saveSession(code, seat) { try { localStorage.setItem(SESSION_KEY, JSON.stringify({ code, seat })); } catch {} }
+function loadSession() { try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; } }
+function clearSession() { try { localStorage.removeItem(SESSION_KEY); } catch {} }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const SUIT = { H: '♥', D: '♦', C: '♣', S: '♠' };
 const RED = (c) => c.suit === 'H' || c.suit === 'D';
@@ -33,11 +40,14 @@ function bindOpts(containerId, attr, key, after) {
     if (after) after();
   });
 }
-bindOpts('modeOpt', 'm', 'mode', () => {
-  const online = cfg.mode === 'online';
+function selectMode(m) {
+  cfg.mode = m;
+  [...$('modeOpt').children].forEach((b) => b.classList.toggle('sel', b.dataset.m === m));
+  const online = m === 'online';
   $('onlineJoin').style.display = online ? '' : 'none';
   $('startBtn').textContent = online ? 'Luo huone' : 'Aloita peli';
-});
+}
+bindOpts('modeOpt', 'm', 'mode', () => selectMode(cfg.mode));
 bindOpts('playerCount', 'n', 'players');
 bindOpts('hintOpt', 'h', 'hints');
 bindOpts('bigOpt', 'b', 'big');
@@ -70,6 +80,7 @@ function myName() { return ($('playerName') && $('playerName').value) || 'Sinä'
 // ---------- Paikallinen tila ----------
 function startLocal() {
   mode = 'local';
+  clearSession();
   const names = [myName(), 'Botti 1', 'Botti 2', 'Botti 3'];
   const players = [];
   for (let i = 0; i < cfg.players; i++) players.push({ name: names[i], isBot: i !== 0 });
@@ -106,10 +117,23 @@ function openNet(code, seat) {
   mode = 'online';
   net = { code, seat, lastVersion: 0 };
   selected = new Set(); staged = [];
+  saveSession(code, seat);
   $('setup').style.display = 'none';
+  $('resume') && ($('resume').style.display = 'none');
   $('hintChk').checked = hintsOn;
   pollOnce();
   net.timer = setInterval(pollOnce, 1500);
+}
+
+// Palaa aloitusnäyttöön (esim. huone kadonnut) ja lopeta pollaus.
+function leaveToSetup(msg) {
+  if (net && net.timer) clearInterval(net.timer);
+  net = null; mode = 'local'; clearSession();
+  $('game').style.display = 'none';
+  $('lobby').style.display = 'none';
+  $('over').style.display = 'none';
+  $('setup').style.display = '';
+  if (msg) alert(msg);
 }
 
 // Pollaa serverin tila. Versiovahti estää turhat renderöinnit ja oman vuoron klobbaamisen.
@@ -118,7 +142,11 @@ async function pollOnce() {
   try {
     const res = await fetch(`/api/state?code=${net.code}&seat=${net.seat}`);
     const snap = await res.json();
-    if (!snap.error) handleSnapshot(snap);
+    if (snap.error) {
+      if (/löydy/i.test(snap.error)) leaveToSetup('Huone ei ole enää voimassa. Aloita uusi peli.');
+      return;
+    }
+    handleSnapshot(snap);
   } catch { /* verkko pätkii — yritetään taas seuraavalla kierroksella */ }
 }
 
@@ -144,6 +172,14 @@ function handleSnapshot(snap) {
 function renderLobby(snap) {
   $('lobby').style.display = 'block';
   $('lobbyCode').textContent = snap.code;
+  // QR-koodi liittymislinkistä
+  if ($('lobbyQR') && typeof location !== 'undefined') {
+    const url = `${location.origin}/?join=${snap.code}`;
+    const qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    $('lobbyQR').innerHTML = qr.createImgTag(5, 10);
+  }
   const list = snap.seats.map((s, i) =>
     `<div>${i + 1}. ${esc(s.name)}${i === snap.you ? ' (sinä)' : ''}</div>`).join('');
   const empty = snap.seatCount - snap.seats.length;
@@ -410,3 +446,28 @@ function winnerText() {
   }
   return 'Jako päättyi — jatka seuraavaan';
 }
+
+// ---------- Käynnistys: ?join=KOODI + keskeneräisen pelin jatko (reconnect) ----------
+(function initEntry() {
+  if (typeof location !== 'undefined') {
+    const joinParam = new URLSearchParams(location.search).get('join');
+    if (joinParam) {
+      selectMode('online');
+      if ($('joinCode')) $('joinCode').value = joinParam.toUpperCase();
+    }
+  }
+  const sess = loadSession();
+  if (sess && sess.code) {
+    if ($('resume')) $('resume').style.display = '';
+    if ($('resumeCode')) $('resumeCode').textContent = sess.code;
+    if ($('resumeBtn')) $('resumeBtn').onclick = () => {
+      hintsOn = !!cfg.hints;
+      document.body.classList.toggle('big', !!cfg.big);
+      openNet(sess.code, sess.seat);
+    };
+    if ($('resumeDismiss')) $('resumeDismiss').onclick = () => {
+      clearSession();
+      if ($('resume')) $('resume').style.display = 'none';
+    };
+  }
+})();

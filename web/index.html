@@ -141,6 +141,12 @@
     <h1>🃏 Mökki-Canasta</h1>
     <p>Annelin säännöillä. Pelaa botteja vastaan tai harjoittele.</p>
 
+    <div id="resume" style="display:none;margin:0 0 20px;padding:14px;border-radius:14px;background:rgba(230,184,0,.15);border:1px solid var(--gold)">
+      <div style="margin-bottom:10px">Sinulla on kesken peli (<b id="resumeCode"></b>)</div>
+      <button id="resumeBtn" style="font-size:1.15rem;font-weight:800;padding:12px 26px;border-radius:12px;border:none;background:var(--gold);color:#000;cursor:pointer">Jatka peliä</button>
+      <button id="resumeDismiss" style="margin-left:8px;font-size:.9rem;padding:11px 16px;border-radius:12px;border:1px solid var(--line);background:transparent;color:#fff;cursor:pointer">Aloita alusta</button>
+    </div>
+
     <input id="playerName" placeholder="Nimesi" maxlength="20" value="Sinä"
       style="font-size:1.1rem;padding:12px 16px;border-radius:12px;border:2px solid var(--line);background:rgba(255,255,255,.08);color:#fff;width:220px;text-align:center" />
 
@@ -186,6 +192,8 @@
     <h1 style="font-size:1.8rem;margin:0 0 8px">Huone</h1>
     <p style="opacity:.85;margin:0 0 8px">Jaa tämä koodi muille pelaajille:</p>
     <div id="lobbyCode" style="font-size:3rem;font-weight:800;letter-spacing:10px;color:var(--gold);margin:8px 0"></div>
+    <div id="lobbyQR" style="margin:10px auto;line-height:0"></div>
+    <div style="opacity:.7;font-size:.85rem;margin-bottom:8px">Skannaa liittyäksesi</div>
     <div id="lobbyPlayers" style="margin:18px 0;font-size:1.1rem"></div>
     <p id="lobbyHint" style="opacity:.8;font-size:.95rem"></p>
     <button id="lobbyStart" style="display:none;margin-top:14px;font-size:1.3rem;font-weight:800;padding:14px 36px;border-radius:16px;border:none;background:var(--gold);color:#000;cursor:pointer">Aloita peli</button>
