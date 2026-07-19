@@ -327,6 +327,9 @@ function paint() {
   }
 
   const hints = hintsOn ? hintRanks() : new Set();
+  // Kortit joilla voi ottaa poistopinon (2 samaa kuin pinon päällin kortti).
+  const top = V.discardTop;
+  const canFetchRank = (myTurn && V.phase === 'draw' && top && !isWild(top) && top.rank !== '3') ? top.rank : null;
   const stagedIds = new Set(staged.flat());
   const hand = $('hand'); hand.innerHTML = '';
   const order = ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2', 'JOKER'];
@@ -337,6 +340,7 @@ function paint() {
     else {
       if (selected.has(c.id)) el.classList.add('sel');
       if (hints.has(c.rank) && !isWild(c)) el.classList.add('hint');
+      if (canFetchRank && !isWild(c) && c.rank === canFetchRank) el.classList.add('canfetch');
       if (c.id === lastDrawnId) {
         el.classList.add('justdrew');
         if (lastDrawnId !== scrolledForId && el.scrollIntoView) {
@@ -390,7 +394,12 @@ function renderMessage(myTurn, hints) {
   if (!myTurn) { m.textContent = ''; $('pending').textContent = ''; return; }
   const team = myTeam();
   if (V.phase === 'draw') {
-    m.textContent = 'Nosta pakasta — tai valitse 2 samaa kuin pinon päällin kortti ja ota pino.';
+    const top = V.discardTop;
+    if (top && !isWild(top) && top.rank !== '3') {
+      m.textContent = `Nosta pakasta — tai ota poistopino valitsemalla kädestä 2 korttia arvoa ${top.rank} (korostettu sinisellä).`;
+    } else {
+      m.textContent = 'Nosta pakasta. (Poistopinoa ei voi ottaa: päällä villi tai musta 3.)';
+    }
   } else if (!team.hasOpened && hintsOn) {
     const need = openingRequirement(team.score);
     const pts = staged.flat().reduce((s, id) => s + cardValue(findInHand(id)), 0);

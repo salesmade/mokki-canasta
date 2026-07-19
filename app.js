@@ -2512,6 +2512,8 @@ function paint() {
     mm.appendChild(g);
   }
   const hints = hintsOn ? hintRanks() : /* @__PURE__ */ new Set();
+  const top = V.discardTop;
+  const canFetchRank = myTurn && V.phase === "draw" && top && !isWild(top) && top.rank !== "3" ? top.rank : null;
   const stagedIds = new Set(staged.flat());
   const hand = $("hand");
   hand.innerHTML = "";
@@ -2524,6 +2526,7 @@ function paint() {
     } else {
       if (selected.has(c.id)) el.classList.add("sel");
       if (hints.has(c.rank) && !isWild(c)) el.classList.add("hint");
+      if (canFetchRank && !isWild(c) && c.rank === canFetchRank) el.classList.add("canfetch");
       if (c.id === lastDrawnId) {
         el.classList.add("justdrew");
         if (lastDrawnId !== scrolledForId && el.scrollIntoView) {
@@ -2590,7 +2593,12 @@ function renderMessage(myTurn, hints) {
   }
   const team = myTeam();
   if (V.phase === "draw") {
-    m.textContent = "Nosta pakasta \u2014 tai valitse 2 samaa kuin pinon p\xE4\xE4llin kortti ja ota pino.";
+    const top = V.discardTop;
+    if (top && !isWild(top) && top.rank !== "3") {
+      m.textContent = `Nosta pakasta \u2014 tai ota poistopino valitsemalla k\xE4dest\xE4 2 korttia arvoa ${top.rank} (korostettu sinisell\xE4).`;
+    } else {
+      m.textContent = "Nosta pakasta. (Poistopinoa ei voi ottaa: p\xE4\xE4ll\xE4 villi tai musta 3.)";
+    }
   } else if (!team.hasOpened && hintsOn) {
     const need = openingRequirement(team.score);
     const pts = staged.flat().reduce((s, id) => s + cardValue(findInHand(id)), 0);
